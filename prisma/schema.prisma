@@ -1,0 +1,65 @@
+// datasource configuration for the PostgreSQL database
+datasource db {
+  provider = "postgresql"          // Database provider
+  url      = env("DATABASE_URL")   // URL for the database, typically stored in environment variables for security
+}
+
+// generator configuration for Prisma Client
+generator client {
+  provider = "prisma-client-js"    // Specifies the Prisma client for JavaScript
+}
+
+// Model definition for 'Account'
+model Account {
+  id                       String  @id @default(cuid()) // Unique identifier for each account, auto-generated
+  userId                   String                       // Associated User ID
+  type                     String                       // Type of the account (e.g., local, Google, etc.)
+  provider                 String                       // Account provider (e.g., Google, Facebook)
+  providerAccountId        String                       // Account ID provided by the provider
+  refresh_token            String? @db.Text             // Refresh token (optional)
+  access_token             String? @db.Text             // Access token (optional)
+  refresh_token_expires_in Int?                         // Expiry time for the refresh token (optional)
+  expires_at               Int?                         // Expiry time for the account (optional)
+  token_type               String?                      // Type of the token (optional)
+  scope                    String?                      // Scope of access (optional)
+  id_token                 String? @db.Text             // ID token (optional)
+  session_state            String?                      // Session state (optional)
+
+  // Relation to User model. Cascade on delete.
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Unique constraint for provider and provider account ID
+  @@unique([provider, providerAccountId])
+}
+
+// Model definition for 'Session'
+model Session {
+  id           String   @id @default(cuid()) // Unique identifier for each session, auto-generated
+  sessionToken String   @unique              // Unique session token
+  userId       String                       // Associated User ID
+  expires      DateTime                     // Expiry date and time for the session
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Relation to User model with cascade on delete
+}
+
+// Model definition for 'User'
+model User {
+  id            String    @id @default(cuid()) // Unique identifier for each user, auto-generated
+  createdAt     DateTime  @default(now())     // Timestamp of when the user was created
+  updatedAt     DateTime  @updatedAt          // Timestamp of the last update to the user
+  name          String?                       // User's name (optional)
+  email         String?   @unique             // User's email, unique (optional)
+  emailVerified DateTime?                     // Timestamp of when the email was verified (optional)
+  image         String?                       // Link to user's image (optional)
+  accounts      Account[]                     // Relation to Account models
+  sessions      Session[]                     // Relation to Session models
+}
+
+// Model definition for 'VerificationToken'
+model VerificationToken {
+  identifier String                          // Identifier for the verification token
+  token      String   @unique                // Unique verification token
+  expires    DateTime                        // Expiry date and time for the token
+
+  // Unique constraint for identifier and token
+  @@unique([identifier, token])
+}
